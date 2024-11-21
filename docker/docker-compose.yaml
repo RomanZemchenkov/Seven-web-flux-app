@@ -1,0 +1,25 @@
+version: "3.9"
+
+networks:
+  my_app:
+    name: "seven_app"
+    driver: bridge
+
+name: "seven_spring_app"
+services:
+  mongo:
+    container_name: "mongo_container"
+    image: "bitnami/mongodb:latest"
+    ports:
+      - "27017:27017"
+    environment:
+      - "MONGODB_ROOT_USER=${MONGODB_ROOT_USER}"
+      - "MONGODB_ROOT_PASSWORD=${MONGODB_ROOT_PASSWORD}"
+    networks:
+      - "my_app"
+    volumes:
+      - "mongo_my_data:/bitnami/mongodb"
+
+
+volumes:
+  mongo_my_data:
