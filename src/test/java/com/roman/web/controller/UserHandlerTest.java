@@ -14,6 +14,7 @@ import org.springframework.data.mongodb.core.ReactiveMongoTemplate;
 import org.springframework.http.MediaType;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.web.reactive.server.WebTestClient;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -36,12 +37,12 @@ public class UserHandlerTest extends MongoContainerInitializer {
     void setUp(){
         reactiveMongoTemplate.dropCollection("userDoc").subscribe();
         reactiveMongoTemplate.dropCollection("db_sequence").subscribe();
-        userService.create(Mono.just(new CreateUserDto("username","email"))).block();
     }
 
     @Test
     @DisplayName("Test for /api/users GET method")
     void findAllUsersMethod(){
+        userCreateFactory(2);
         WebTestClient.ResponseSpec exchange = webTestClient
                 .get()
                 .uri("/api/users")
@@ -51,12 +52,13 @@ public class UserHandlerTest extends MongoContainerInitializer {
                 .expectStatus()
                 .isOk()
                 .expectBody()
-                .jsonPath("$.length()").isEqualTo(1);
+                .jsonPath("$.size()").isEqualTo(2);
     }
 
     @Test
     @DisplayName("Test for /api/users POST method")
     void createNewUserMethod(){
+        userCreateFactory(1);
         Mono<CreateUserDto> newUser = Mono.just(new CreateUserDto("Kollega", "unknownuser"));
 
         WebTestClient.ResponseSpec exchange = webTestClient
@@ -79,6 +81,7 @@ public class UserHandlerTest extends MongoContainerInitializer {
     @Test
     @DisplayName("Test for /api/users/{id} GET method")
     void findByIdMethod(){
+        userCreateFactory(1);
         WebTestClient.ResponseSpec exchange = webTestClient
                 .get()
                 .uri("/api/users/1")
@@ -90,14 +93,15 @@ public class UserHandlerTest extends MongoContainerInitializer {
                 .expectBody()
                 .jsonPath("$.length()").isEqualTo(3)
                 .jsonPath("$.id").isEqualTo(1)
-                .jsonPath("$.username").isEqualTo("username")
-                .jsonPath("$.email").isEqualTo("email");
+                .jsonPath("$.username").isEqualTo("Roman1")
+                .jsonPath("$.email").isEqualTo("email1");
 
     }
 
     @Test
     @DisplayName("Test for /api/users PATCH method")
     void updateUserMethod(){
+        userCreateFactory(1);
         Mono<UpdateUserDto> updateUser = Mono.just(new UpdateUserDto("1", "newUsername", "newEmail"));
 
         WebTestClient.ResponseSpec exchange = webTestClient
@@ -120,6 +124,8 @@ public class UserHandlerTest extends MongoContainerInitializer {
     @Test
     @DisplayName("Test for /api/delete/{id} DELETE method")
     void deleteUserMethod(){
+        userCreateFactory(1);
+
         WebTestClient.ResponseSpec exchange = webTestClient
                 .delete()
                 .uri("/api/users/1")
@@ -130,6 +136,12 @@ public class UserHandlerTest extends MongoContainerInitializer {
                 .isOk()
                 .expectBody()
                 .jsonPath("$").isEqualTo("Пользователь был удалён");
+    }
+
+    private void userCreateFactory(int count) {
+        Flux.range(1, count)
+                .flatMap(i -> userService.create(Mono.just(new CreateUserDto("Roman" + i, "email" + i))))
+                .blockLast();
     }
 
 }
